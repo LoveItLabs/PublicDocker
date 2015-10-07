@@ -1,4 +1,4 @@
-FROM /loveitlabs/base2:latest
+FROM loveitlabs/base2:latest
 MAINTAINER LoveItLabs Team <team@loveItLabs.io>
 
 
