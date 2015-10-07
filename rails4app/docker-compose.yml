@@ -1,0 +1,129 @@
+##docker-compose.yml
+##
+## Everything you need to spin up a common rails Development stack with 
+##
+##   Rails4 App Server
+##   MySQL Server
+##   Redis Server
+##   Elastic Search
+##   Sidekiq background worker
+##   Remote Syslog Server (commented out by default, but check out papertrailapp.com)
+## 
+##   If you don't need one or more of these, comment it out. :D 
+
+############################## MySQL ######################################
+#
+#  Make sure /tmp/mysql_Rails4app exists on the host machine! 
+db:
+  image: mysql 
+  ports:
+    - "3306:3306"
+  hostname: db1
+  environment: 
+    MYSQL_ROOT_PASSWORD: reallyterriblepassword
+  volumes:
+   - /tmp/mysql_Rails4app:/var/lib/mysql
+
+############################## Redis ####################################
+redis:
+ image: redis:3
+ hostname: redis1
+ ports:
+  - "6379:6379"
+
+############################# Elastic Search ############################
+elastic: 
+ image: elasticsearch
+ dns:
+  - 8.8.8.8
+  - 9.9.9.9
+ hostname: elastic1 
+ ports:
+    - "9200:9200"
+    - "9300:9300"
+
+########################## bundle cache data image ####################
+###
+###  This gives us persistent storage for the bundler cache. 
+###  This reduces your bundle install operations from minutes
+###  to a few seconds. #PainDrivenEngineering
+### 
+###   ` docker run --name Rails4BundlerUpdater  rails4app_app bundle  `  
+###  
+###
+bundle:
+  build: . 
+  command: echo "I'm a little data container short and stout..."
+  volumes:
+    - /bundle
+
+######################### Rails4 App Server #############################  
+app:
+ build: . 
+ dns:
+  - 8.8.8.8
+  - 9.9.9.9
+ ports:
+   - "8001:80"
+   - "3000:3000"
+ hostname: app1
+ links: 
+   - db
+   - redis 
+   - elastic
+ volumes:
+   - .:/app
+   - ./tmp:/tmp
+ volumes_from:
+   - bundle
+ environment:
+    RAILS_ENV: development
+    DEV_DBHOST: db
+    DEV_DBUSR: root 
+    DEV_DBPASS: reallyterriblepassword
+    REDIS_URL: redis://redis:6379/12 
+    ELASTICSEARCH_URL: http://elastic:9200
+    #Command for Troubleshooting the docker image. Keeps it running so you can get a shell.  
+       #command: "/bin/looper.sh"
+ #Start from scratch with a newly seeded DB and webrick. 
+ command: bash -c "cd /app && rm -f /app/tmp/pids/server.pid && bundle install && bundle exec rake  db:create && bundle exec rake db:migrate db:seed  && bundle exec rails server -b 0.0.0.0"
+    #update your bundle 
+       #command: bash -c "cd /app && bundle update"
+ #Default command for production.  Note this uses the thin or unicorn app server. RAILS_ENV determines if port3000 or nginx socket. 
+ #command: bash -c " rm -f /app/tmp/pids/server.pid && /usr/bin/supervisord -c /app/supervisord.conf"
+
+############################## Rails4 Background Worker #########################
+worker:
+ build: . 
+ dns:
+  - 8.8.8.8
+  - 9.9.9.9
+ links: 
+   - db
+   - redis 
+   - elastic
+ hostname: worker1
+ volumes:
+   - .:/app
+   - ./tmp:/tmp
+ volumes_from:
+   - bundle
+ environment:
+    RAILS_ENV: development
+    DEV_DBHOST: db
+    DEV_DBUSR: root 
+    DEV_DBPASS: reallyterriblepassword
+    REDIS_URL: redis://redis:6379/12 
+    ELASTICSEARCH_URL: http://elastic:9200
+ #command: bash -c "cron -f &  cd /app && bundle exec sidekiq "
+ command: "/bin/looper.sh"
+######################### Remote Syslogging via LogSpout and Papertrail #############################  
+logspout:
+ image: gliderlabs/logspout:master
+ volumes:
+    - /var/run/docker.sock:/tmp/docker.sock
+ #command: syslog://logs.papertrailapp.com:1111
+ hostname: logspout1
+
+
+

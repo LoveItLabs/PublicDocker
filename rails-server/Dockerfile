@@ -1,4 +1,4 @@
-FROM /loveitlabs/base2:latest
+FROM loveitlabs/base2:latest
 MAINTAINER LoveItLabs Team <team@loveItLabs.io>
 
 
@@ -31,7 +31,7 @@ RUN sudo apt-get install -y ffmpeg gstreamer0.10-ffmpeg
 #### Nginx ####
 RUN rm /etc/nginx/sites-enabled/default
 #ADD etc/nginx/$APPROOT /etc/nginx/sites-enabled/
-ADD etc/nginx/nginx.conf /etc/nginx/nginx.conf
+ADD nginx/nginx.conf /etc/nginx/nginx.conf
 
 
 
