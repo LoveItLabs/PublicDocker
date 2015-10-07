@@ -1,4 +1,4 @@
-FROM registry.loveitlabs.com/loveitlabs/base2:latest
+FROM registry.loveitlabs.com/love_it_labs/base2:latest
 MAINTAINER LoveItLabs Team <team@loveItLabs.io>
 
 
